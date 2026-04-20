@@ -16,7 +16,9 @@
 
 #include "autoware_lanelet2_extension/io/autoware_opendrive_parser.hpp"
 
+#include "opendrive/junction_linker.hpp"
 #include "opendrive/lane_builder.hpp"
+#include "opendrive/road_linker.hpp"
 #include "opendrive/xodr_reader.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
@@ -33,17 +35,24 @@ std::unique_ptr<LaneletMap> AutowareOpenDriveParser::parse(
   const auto doc = opendrive::readXodrFile(filename, errors);
 
   auto map = std::make_unique<LaneletMap>();
-  // Phase 3: per-road lanelets with shared boundaries within a lane section
-  // and Point3d unification across section boundaries on the same road. Each
-  // road is still a disconnected island — cross-road linking arrives in
-  // Phase 4. Config knobs are wired in Phase 6; defaults apply for now.
   opendrive::LaneBuilderOptions opts;
+
+  // Phase 4: one deduper across every road in the file. Per §5.11, endpoint
+  // Point3d's are unified at road–road `<link>` contact points and junction
+  // entries/exits via the same spatial hash that handles within-road
+  // section boundaries — that unification happens implicitly as soon as
+  // the deduper is shared, because both sides of a link sample the same
+  // world coordinates (within merge_tol_m) at the contact point.
+  opendrive::Point3dDeduper deduper{opts.merge_tol_m};
   for (const auto & road : doc.roads) {
-    // Per-road deduper: within-road section boundaries share Point3ds.
-    // Cross-road unification is intentionally left to road_linker.
-    opendrive::Point3dDeduper deduper{opts.merge_tol_m};
     opendrive::buildRoadLanelets(road, opts, deduper, *map, errors);
   }
+
+  // Metadata-level validation per §5.9 / §5.10 / §7. The deduper already did
+  // the geometric work; these passes flag dangling ids and internal roads
+  // that mistakenly carry <road>/<link> (a v1 non-fatal warning).
+  opendrive::validateRoadLinks(doc, errors);
+  opendrive::validateJunctions(doc, errors);
 
   return map;
 }
