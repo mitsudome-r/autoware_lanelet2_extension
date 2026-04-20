@@ -5,6 +5,8 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+  lib/autoware_opendrive_parser.cpp
+  lib/opendrive/xodr_reader.cpp
   lib/autoware_osm_parser.cpp
   lib/autoware_traffic_light.cpp
   lib/crosswalk.cpp
@@ -65,6 +67,10 @@ if(BUILD_TESTING)
   target_link_libraries(route-test ${PROJECT_NAME}_lib)
   ament_add_ros_isolated_gtest(normalize-radian test/src/test_normalize_radian.cpp)
   target_link_libraries(normalize-radian ${PROJECT_NAME}_lib)
+  ament_add_ros_isolated_gtest(opendrive-parser-test test/src/test_opendrive_parser.cpp)
+  target_link_libraries(opendrive-parser-test ${PROJECT_NAME}_lib)
+  target_compile_definitions(opendrive-parser-test PRIVATE
+    TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resource")
 endif()
 
 ament_auto_package()
