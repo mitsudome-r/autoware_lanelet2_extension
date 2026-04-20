@@ -16,6 +16,7 @@
 
 #include "autoware_lanelet2_extension/io/autoware_opendrive_parser.hpp"
 
+#include "opendrive/lane_builder.hpp"
 #include "opendrive/xodr_reader.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
@@ -29,13 +30,22 @@ namespace lanelet::io_handlers
 std::unique_ptr<LaneletMap> AutowareOpenDriveParser::parse(
   const std::string & filename, ErrorMessages & errors) const
 {
-  // Phase 1 scaffolding: read the .xodr into a POD tree and return an empty
-  // map. Later phases (geometry, lane building, linking, signals) will consume
-  // `doc` to populate the LaneletMap.
   const auto doc = opendrive::readXodrFile(filename, errors);
-  (void)doc;
 
-  return std::make_unique<LaneletMap>();
+  auto map = std::make_unique<LaneletMap>();
+  // Phase 3: per-road lanelets with shared boundaries within a lane section
+  // and Point3d unification across section boundaries on the same road. Each
+  // road is still a disconnected island — cross-road linking arrives in
+  // Phase 4. Config knobs are wired in Phase 6; defaults apply for now.
+  opendrive::LaneBuilderOptions opts;
+  for (const auto & road : doc.roads) {
+    // Per-road deduper: within-road section boundaries share Point3ds.
+    // Cross-road unification is intentionally left to road_linker.
+    opendrive::Point3dDeduper deduper{opts.merge_tol_m};
+    opendrive::buildRoadLanelets(road, opts, deduper, *map, errors);
+  }
+
+  return map;
 }
 
 namespace

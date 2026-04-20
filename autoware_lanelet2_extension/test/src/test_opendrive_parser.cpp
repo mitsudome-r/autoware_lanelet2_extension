@@ -66,12 +66,12 @@ TEST(OpenDriveParserPhase1, LoadsTown10HDWithoutFatalError)
 {
   lanelet::projection::MGRSProjector projector;
   lanelet::ErrorMessages errors;
-  // Phase 1 returns an empty map but must not throw. Subsequent phases will
-  // populate the map and tighten the assertions.
   auto map = lanelet::load(fixturePath(), projector, &errors);
   EXPECT_NE(map, nullptr);
-  // `.has_lateral_profile` warnings from Town10HD are expected here; Phase 1
-  // does not pin the count — §9.2 (Phase 6) does.
+  // Phase 3 populates the map with per-road lanelets; Town10HD has hundreds
+  // of driving-lane instances. A generous lower bound here catches full
+  // regressions without hard-coding an exact count — §9.2 (Phase 6) will.
+  EXPECT_GT(map->laneletLayer.size(), 100u);
 }
 
 // NOLINTEND(readability-identifier-naming)

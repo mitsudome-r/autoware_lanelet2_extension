@@ -8,6 +8,7 @@ ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   lib/autoware_opendrive_parser.cpp
   lib/opendrive/fresnel.cpp
   lib/opendrive/geometry.cpp
+  lib/opendrive/lane_builder.cpp
   lib/opendrive/xodr_reader.cpp
   lib/autoware_osm_parser.cpp
   lib/autoware_traffic_light.cpp
@@ -75,6 +76,8 @@ if(BUILD_TESTING)
     TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resource")
   ament_add_ros_isolated_gtest(opendrive-geometry-test test/src/test_opendrive_geometry.cpp)
   target_link_libraries(opendrive-geometry-test ${PROJECT_NAME}_lib)
+  ament_add_ros_isolated_gtest(opendrive-lane-builder-test test/src/test_opendrive_lane_builder.cpp)
+  target_link_libraries(opendrive-lane-builder-test ${PROJECT_NAME}_lib)
 endif()
 
 ament_auto_package()
