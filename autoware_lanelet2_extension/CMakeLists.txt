@@ -11,6 +11,7 @@ ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   lib/opendrive/junction_linker.cpp
   lib/opendrive/lane_builder.cpp
   lib/opendrive/road_linker.cpp
+  lib/opendrive/signal_builder.cpp
   lib/opendrive/xodr_reader.cpp
   lib/autoware_osm_parser.cpp
   lib/autoware_traffic_light.cpp
@@ -82,6 +83,8 @@ if(BUILD_TESTING)
   target_link_libraries(opendrive-lane-builder-test ${PROJECT_NAME}_lib)
   ament_add_ros_isolated_gtest(opendrive-linker-test test/src/test_opendrive_linker.cpp)
   target_link_libraries(opendrive-linker-test ${PROJECT_NAME}_lib)
+  ament_add_ros_isolated_gtest(opendrive-signal-builder-test test/src/test_opendrive_signal_builder.cpp)
+  target_link_libraries(opendrive-signal-builder-test ${PROJECT_NAME}_lib)
 endif()
 
 ament_auto_package()

@@ -19,6 +19,7 @@
 #include "opendrive/junction_linker.hpp"
 #include "opendrive/lane_builder.hpp"
 #include "opendrive/road_linker.hpp"
+#include "opendrive/signal_builder.hpp"
 #include "opendrive/xodr_reader.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
@@ -53,6 +54,12 @@ std::unique_ptr<LaneletMap> AutowareOpenDriveParser::parse(
   // that mistakenly carry <road>/<link> (a v1 non-fatal warning).
   opendrive::validateRoadLinks(doc, errors);
   opendrive::validateJunctions(doc, errors);
+
+  // Phase 5: `<signal>` / `<signalReference>` → AutowareTrafficLight. Must
+  // run after the lane builder because reg-element attachment queries the
+  // lanelet index emitted in Phase 3.
+  opendrive::SignalBuilderOptions sig_opts;
+  opendrive::buildSignals(doc, sig_opts, deduper, *map, errors);
 
   return map;
 }
