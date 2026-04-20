@@ -27,10 +27,27 @@ namespace
 {
 constexpr const char * kErrPrefix = "[autoware_opendrive_handler]";
 
-// Append a non-fatal error/warning, with uniform prefix per §7.
-void warn(ErrorMessages & errors, const std::string & msg)
+// §7 helper: "(offset=N)" suffix pointing at the offending pugixml node. N
+// is a byte offset into the source file — pugixml does not expose line/column
+// directly, but the offset is enough for a text editor to jump to the site
+// and is cheap to produce. Returns an empty string for detached nodes.
+std::string nodeLocation(const pugi::xml_node & n)
 {
-  errors.emplace_back(std::string{kErrPrefix} + " " + msg);
+  const auto off = n.offset_debug();
+  if (off < 0) {
+    return {};
+  }
+  std::ostringstream oss;
+  oss << " (offset=" << off << ")";
+  return oss.str();
+}
+
+// Append a non-fatal error/warning with uniform prefix per §7, appending the
+// pugixml source offset of `ctx` so authoring quirks can be traced back to
+// an exact byte in the source file.
+void warnAt(ErrorMessages & errors, const std::string & msg, const pugi::xml_node & ctx)
+{
+  errors.emplace_back(std::string{kErrPrefix} + " " + msg + nodeLocation(ctx));
 }
 
 double attrDouble(const pugi::xml_node & n, const char * key, double fallback = 0.0)
@@ -147,7 +164,7 @@ Geometry readGeometry(const pugi::xml_node & n, ErrorMessages & errors)
     std::ostringstream oss;
     oss << "unknown <geometry> primitive at s=" << g.s
         << "; assuming line for forward progress";
-    warn(errors, oss.str());
+    warnAt(errors, oss.str(), n);
     g.primitive = GeomLine{};
   }
   return g;
@@ -200,7 +217,7 @@ Lane readLane(const pugi::xml_node & lane_node, ErrorMessages & errors, const st
     std::ostringstream oss;
     oss << "road " << road_id << " lane " << lane.id
         << ": <border> is ignored in v1 (treated as zero width)";
-    warn(errors, oss.str());
+    warnAt(errors, oss.str(), lane_node.child("border"));
   }
   // <roadMark>, <material>, <speed>, <access> are v1-ignored. They do not
   // meaningfully affect geometry, so no warning per §4.
@@ -341,7 +358,7 @@ Road readRoad(const pugi::xml_node & road_node, ErrorMessages & errors)
       std::ostringstream oss;
       oss << "road " << road.id
           << ": <lateralProfile> is ignored in v1 (superelevation/shape not modeled)";
-      warn(errors, oss.str());
+      warnAt(errors, oss.str(), lp);
     }
   }
 

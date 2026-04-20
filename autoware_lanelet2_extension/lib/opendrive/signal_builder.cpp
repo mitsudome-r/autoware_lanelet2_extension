@@ -87,21 +87,43 @@ std::size_t findSectionIdx(const Road & road, double s)
   return idx;
 }
 
-// §5.12 applicable-lane filter, a function of the authored `<validity>` list
-// and the signal `orientation`. `validities` may be empty (§5.12 default:
-// "all same-direction lanes in the current lane section").
+// §5.12 applicable-lane filter.
+//
+// The spec's formula `applicable = validity ∩ same-direction-lanes` produces
+// empty sets for most CARLA-authored Town10HD signals:
+//   1. Many traffic-light signals use `<validity fromLane="0" toLane="0"/>`,
+//      which literally selects only the lane-0 centerline — a non-drivable
+//      lane that never becomes a lanelet.
+//   2. Many `<signalReference>` entries carry an authored validity on one
+//      side of the road but an orientation that maps to the other side
+//      (e.g. `orientation="+"` + `<validity fromLane="1" toLane="1"/>`).
+//
+// We soften the spec in two matching ways to make such authoring usable:
+//   A. If validity is absent or entirely `0/0`, fall back to the
+//      orientation-based default (same-direction lanes). This covers case 1.
+//   B. If validity is authored with at least one non-center entry, trust it
+//      and skip the orientation intersection. Orientation remains load-
+//      bearing only as the default-direction selector in case A.
+// Validity-authored-wins is consistent with the spec's intent of letting
+// authors narrow the applicable set explicitly; case-A's fallback preserves
+// the documented default when authors don't.
 std::vector<int> applicableLaneIds(
   const LaneSection & section, const std::vector<SignalValidity> & validities,
   const std::string & orientation)
 {
+  const bool only_center = !validities.empty() && std::all_of(
+    validities.begin(), validities.end(),
+    [](const SignalValidity & v) { return v.from_lane == 0 && v.to_lane == 0; });
+  const bool use_default = validities.empty() || only_center;
+
   auto matches_orientation = [&](int id) {
     if (orientation == "+") return id < 0;  // +s-bound lanes
     if (orientation == "-") return id > 0;  // -s-bound lanes
     return true;                            // "none" or empty: both directions
   };
-  auto matches_validity = [&](int id) {
-    if (validities.empty()) {
-      return true;
+  auto matches = [&](int id) {
+    if (use_default) {
+      return matches_orientation(id);
     }
     for (const auto & v : validities) {
       if (v.from_lane <= id && id <= v.to_lane) {
@@ -113,12 +135,12 @@ std::vector<int> applicableLaneIds(
 
   std::vector<int> ids;
   for (const auto & l : section.left) {
-    if (matches_orientation(l.id) && matches_validity(l.id)) {
+    if (matches(l.id)) {
       ids.push_back(l.id);
     }
   }
   for (const auto & l : section.right) {
-    if (matches_orientation(l.id) && matches_validity(l.id)) {
+    if (matches(l.id)) {
       ids.push_back(l.id);
     }
   }

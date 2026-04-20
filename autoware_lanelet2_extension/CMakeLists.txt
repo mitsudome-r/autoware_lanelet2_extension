@@ -76,7 +76,8 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(opendrive-parser-test test/src/test_opendrive_parser.cpp)
   target_link_libraries(opendrive-parser-test ${PROJECT_NAME}_lib)
   target_compile_definitions(opendrive-parser-test PRIVATE
-    TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resource")
+    TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resource"
+    HAND_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/opendrive")
   ament_add_ros_isolated_gtest(opendrive-geometry-test test/src/test_opendrive_geometry.cpp)
   target_link_libraries(opendrive-geometry-test ${PROJECT_NAME}_lib)
   ament_add_ros_isolated_gtest(opendrive-lane-builder-test test/src/test_opendrive_lane_builder.cpp)

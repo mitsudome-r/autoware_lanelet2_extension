@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenDRIVE>
+  <header revMajor="1" revMinor="6" name="malformed" version="1.0" date="2026-01-01"
+  <!-- deliberately malformed: header tag never closes properly -->
+</OpenDRIVE>
